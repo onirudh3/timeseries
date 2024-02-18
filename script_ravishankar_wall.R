@@ -56,3 +56,9 @@ electricity_df <- read_excel("Retail_sales_of_electricity.xlsx") %>%
 # Problem 2 ---------------------------------------------------------------
 
 stock_df <- read.csv("apple_stock_prices_data.csv")
+
+
+
+# Problem 3 ---------------------------------------------------------------
+
+
