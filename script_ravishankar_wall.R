@@ -61,4 +61,6 @@ stock_df <- read.csv("apple_stock_prices_data.csv")
 
 # Problem 3 ---------------------------------------------------------------
 
+## Question 3 ---
 
+df <- read_excel("ie_data.xls") # Doesn't work
