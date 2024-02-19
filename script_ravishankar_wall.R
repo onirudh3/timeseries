@@ -108,9 +108,7 @@ sd(fedfunds_df$value)
 
 
 ## Electricity consumption: EIA monthly data ----
-electricity_df <- read_excel("Retail_sales_of_electricity.xlsx") %>% 
-  gather(date, value) %>%
-  mutate(date = excel_numeric_to_date(as.numeric(as.character(date)), date_system = "modern"))
+
 
 # ACF
 acf(electricity_df$value, main = "")
