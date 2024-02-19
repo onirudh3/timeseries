@@ -6,8 +6,7 @@ library(dplyr)
 library(tidyr)
 library(janitor)
 library(readxl)
-library(ggplot2)
-
+library(forecast)
 
 # Problem 1 ---------------------------------------------------------------
 
@@ -48,6 +47,10 @@ acf(cpi_df$diff, main = "", na.action = na.pass)
 pacf(cpi_df$value, main = "")
 pacf(cpi_df$diff, main = "", na.action = na.pass)
 
+# Fit AR model
+ar_fit <- ar(cpi_df$value)
+theforecast <- forecast(object = ar_fit, h = 20) # twenty period forecast
+plot(theforecast)
 
 ## Inflation, consumer prices for the US ----
 inflation_df <- fredr(
