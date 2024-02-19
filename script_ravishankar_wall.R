@@ -107,8 +107,10 @@ summary(fedfunds_df$value)
 sd(fedfunds_df$value)
 
 
-## Electricity consumption: EIA monthly data ----
-
+## Total electricity consumption USA: IEA yearly data ----
+electricity_df <- read.csv("Electricity consumption - United States.csv", skip = 2) %>% 
+  rename("value" = "Electricity.consumption",
+         "date" = "X")
 
 # ACF
 acf(electricity_df$value, main = "")
@@ -117,7 +119,7 @@ acf(electricity_df$value, main = "")
 pacf(electricity_df$value, main = "")
 
 # Plot
-plot(electricity_df$date, electricity_df$value, type = "l", xlab = "Date", ylab = "Electricity Consumption")
+plot(electricity_df$date, electricity_df$value, type = "l", xlab = "Date", ylab = "Electricity Consumption USA")
 
 # Descriptive statistics
 summary(electricity_df$date)
