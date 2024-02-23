@@ -1,3 +1,7 @@
+# Times Series Homework
+# Alec Wall and Anirudh Ravishankar
+# February 2024
+
 
 # Libraries ---------------------------------------------------------------
 
@@ -7,6 +11,10 @@ library(tidyr)
 library(janitor)
 library(readxl)
 library(forecast)
+library(moments)
+
+# Forbid scientific notation
+options(scipen = 999)
 
 # Problem 1 ---------------------------------------------------------------
 
@@ -142,7 +150,7 @@ pacf(fedfunds_df$value, main = "")
 pacf(fedfunds_df$diff, main = "", na.action = na.pass)
 
 
-## Total electricity consumption USA: IEA yearly data ----
+## Total electricity consumption USA: monthly data ----
 electricity_df <- read.csv("Electricity consumption - United States.csv", skip = 2) %>% 
   rename("value" = "Electricity.consumption",
          "date" = "X")
@@ -174,6 +182,30 @@ pacf(electricity_df$diff, main = "", na.action = na.pass)
 
 stock_df <- read.csv("apple_stock_prices_data.csv")
 
+# Returns and z
+stock_df <- stock_df %>% 
+  mutate(return = diff(Adj.Close) / lag(Adj.Close),
+         log_return = log(return + 1),
+         z = case_when(log_return > 0 ~ 1, T ~ 0))
+
+# Descriptive statistics
+summary(stock_df$log_return) # Mean
+sd(stock_df$log_return, na.rm = T) # Standard deviation
+skewness(stock_df$log_return, na.rm = T) # Skewness
+kurtosis(stock_df$log_return, na.rm = T) # Kurtosis
+
+summary(stock_df$z) # Mean
+sd(stock_df$z, na.rm = T) # Standard deviation
+skewness(stock_df$z, na.rm = T) # Skewness
+kurtosis(stock_df$z, na.rm = T) # Kurtosis
+
+# ACF
+acf(stock_df$log_return, main = "", na.action = na.pass)
+acf(stock_df$z, main = "", na.action = na.pass)
+
+# PACF
+pacf(stock_df$log_return, main = "", na.action = na.pass)
+pacf(stock_df$z, main = "", na.action = na.pass)
 
 # Problem 3 ---------------------------------------------------------------
 
