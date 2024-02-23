@@ -12,9 +12,11 @@ library(janitor)
 library(readxl)
 library(forecast)
 library(moments)
+library(MASS)
 
 # Forbid scientific notation
 options(scipen = 999)
+
 
 # Problem 1 ---------------------------------------------------------------
 
@@ -56,9 +58,13 @@ pacf(cpi_df$value, main = "")
 pacf(cpi_df$diff, main = "", na.action = na.pass)
 
 # Fit AR model
-ar_fit <- ar(cpi_df$value)
-theforecast <- forecast(object = ar_fit, h = 20) # twenty period forecast
-plot(theforecast)
+ar(cpi_df$value)
+ar(cpi_df$diff, na.action = na.pass) # For FD
+
+# Forecast
+forecast(object = ar(cpi_df$value), h = 3) # three period forecast
+forecast(object = ar(cpi_df$diff, na.action = na.pass), h = 3)
+
 
 ## Inflation, consumer prices for the US ----
 inflation_df <- fredr(
@@ -88,6 +94,14 @@ acf(inflation_df$diff, main = "", na.action = na.pass)
 # PACF
 pacf(inflation_df$value, main = "")
 pacf(inflation_df$diff, main = "", na.action = na.pass)
+
+# Fit AR model
+ar(inflation_df$value)
+ar(inflation_df$diff, na.action = na.pass) # For FD
+
+# Forecast
+forecast(object = ar(inflation_df$value), h = 3) # three period forecast
+forecast(object = ar(inflation_df$diff, na.action = na.pass), h = 3)
 
 
 ## Gross Domestic Product ----
@@ -119,6 +133,14 @@ acf(gdp_df$diff, main = "", na.action = na.pass)
 pacf(gdp_df$value, main = "")
 pacf(gdp_df$diff, main = "", na.action = na.pass)
 
+# Fit AR model
+ar(gdp_df$value)
+ar(gdp_df$diff, na.action = na.pass) # For FD
+
+# Forecast
+forecast(object = ar(gdp_df$value), h = 3)
+forecast(object = ar(gdp_df$diff, na.action = na.pass), h = 3)
+
 
 ## Federal Funds Effective Rate ----
 fedfunds_df <- fredr(
@@ -149,11 +171,19 @@ acf(fedfunds_df$diff, main = "", na.action = na.pass)
 pacf(fedfunds_df$value, main = "")
 pacf(fedfunds_df$diff, main = "", na.action = na.pass)
 
+# Fit AR model
+ar(fedfunds_df$value)
+ar(fedfunds_df$diff, na.action = na.pass) # For FD
+
+# Forecast
+forecast(object = ar(fedfunds_df$value), h = 3)
+forecast(object = ar(fedfunds_df$diff, na.action = na.pass), h = 3)
+
 
 ## Total electricity consumption USA: monthly data ----
-electricity_df <- read.csv("Electricity consumption - United States.csv", skip = 2) %>% 
-  rename("value" = "Electricity.consumption",
-         "date" = "X")
+electricity_df <- read_excel("Retail_sales_of_electricity.xlsx") %>% 
+  gather(date, value) %>%
+  mutate(date = excel_numeric_to_date(as.numeric(as.character(date)), date_system = "modern"))
 
 # First difference
 electricity_df$diff <- c(NA, diff(electricity_df$value, 1))
@@ -177,6 +207,14 @@ acf(electricity_df$diff, main = "", na.action = na.pass)
 pacf(electricity_df$value, main = "")
 pacf(electricity_df$diff, main = "", na.action = na.pass)
 
+# Fit AR model
+ar(electricity_df$value)
+ar(electricity_df$diff, na.action = na.pass) # For FD
+
+# Forecast
+forecast(object = ar(electricity_df$value), h = 3)
+forecast(object = ar(electricity_df$diff, na.action = na.pass), h = 3)
+
 
 # Problem 2 ---------------------------------------------------------------
 
@@ -185,8 +223,13 @@ stock_df <- read.csv("apple_stock_prices_data.csv")
 # Returns and z
 stock_df <- stock_df %>% 
   mutate(return = diff(Adj.Close) / lag(Adj.Close),
-         log_return = log(return + 1),
+         log_return = c(NA, diff(log(Adj.Close), lag = 1)),
          z = case_when(log_return > 0 ~ 1, T ~ 0))
+
+# Plot
+stock_df %>% 
+  ggplot() +
+  geom_line(aes(Date, log_return, group = 1))
 
 # Descriptive statistics
 summary(stock_df$log_return) # Mean
@@ -207,8 +250,75 @@ acf(stock_df$z, main = "", na.action = na.pass)
 pacf(stock_df$log_return, main = "", na.action = na.pass)
 pacf(stock_df$z, main = "", na.action = na.pass)
 
+
 # Problem 3 ---------------------------------------------------------------
+
+## Question 1 ----
+
+# beta = 0.21
+# T = 840
+# rho = 0.972
+# sigma_u = 30.05*10^4
+# sigma_v = 0.108*10^4
+# sigma_uv = -1.621*10^4
+
+# S = 1000
+model_beta <- 0
+
+set.seed(seed = 1232020)
+
+sim <- function(beta, T, rho, sigma_u, sigma_v, sigma_uv, S) {
+  
+  Sigma <- matrix(c(sigma_u, sigma_uv, sigma_uv, sigma_v),2,2)
+  
+  uv <- data.frame(mvrnorm(n=S*T,
+                           mu=c(0,0),
+                           Sigma=Sigma))
+  
+  for (s in 1:S){
+    
+    # Based on his email maybe we shouldn't use x0 = 0?
+    # Confirmed changing x0 to 1 or 10 didn't substantively impact the estimated beta
+    x_t <- 0 + uv[(s-1)*T+1,2]
+    y_t <- 0 + uv[(s-1)*T+1,1]
+    
+    for(i in 2:T){
+      x_t[i] <- rho*x_t[i-1]+uv[(s-1)*T+i,2]
+      y_t[i] <- beta*x_t[i-1]+uv[(s-1)*T+i,1]
+    }
+    
+    data <- data.frame(y_t,x_t)
+    
+    model <- lm(y_t ~ lag(x_t), data=data)
+    model_beta[s] <- model$coefficients[2]
+    
+    rm(x_t, y_t, data)
+    
+  }
+  
+  return(model_beta)
+  
+}
+
+betas_og <- sim(beta=0.21, T=840, rho=0.972, sigma_u = 30.05*10^4, 
+                sigma_v = 0.108*10^4, sigma_uv = -1.621*10^4, S=1000)
+
+betas_rho5 <- sim(beta=0.21, T=840, rho=0.5, sigma_u = 30.05*10^4, 
+                  sigma_v = 0.108*10^4, sigma_uv = -1.621*10^4, S=1000)
+
+betas_rho0 <- sim(beta=0.21, T=840, rho=0, sigma_u = 30.05*10^4, 
+                  sigma_v = 0.108*10^4, sigma_uv = -1.621*10^4, S=1000)
+
+betas_sigma0 <- sim(beta=0.21, T=840, rho=0.972, sigma_u = 30.05*10^4, 
+                    sigma_v = 0.108*10^4, sigma_uv = 0, S=1000)
+
+betas_T1680 <- sim(beta=0.21, T=1680, rho=0, sigma_u = 30.05*10^4, 
+                   sigma_v = 0.108*10^4, sigma_uv = -1.621*10^4, S=1000)
 
 ## Question 3 ---
 
-df <- read_excel("ie_data.xls") # Doesn't work
+df <- read_excel("ie_data.xls")
+
+
+
+
