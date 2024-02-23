@@ -62,8 +62,13 @@ ar(cpi_df$value)
 ar(cpi_df$diff, na.action = na.pass) # For FD
 
 # Forecast
-forecast(object = ar(cpi_df$value), h = 3) # three period forecast
-forecast(object = ar(cpi_df$diff, na.action = na.pass), h = 3)
+frcst <- forecast(object = ar(cpi_df$value), h = 50) # fifty period forecast
+frcst # see first three values
+plot(frcst)
+
+frcst <- forecast(object = ar(cpi_df$diff, na.action = na.pass), h = 50)
+frcst
+plot(frcst)
 
 
 ## Inflation, consumer prices for the US ----
@@ -100,8 +105,13 @@ ar(inflation_df$value)
 ar(inflation_df$diff, na.action = na.pass) # For FD
 
 # Forecast
-forecast(object = ar(inflation_df$value), h = 3) # three period forecast
-forecast(object = ar(inflation_df$diff, na.action = na.pass), h = 3)
+frcst <- forecast(object = ar(inflation_df$value), h = 50)
+frcst
+plot(frcst)
+
+frcst <- forecast(object = ar(inflation_df$diff, na.action = na.pass), h = 50)
+frcst
+plot(frcst)
 
 
 ## Gross Domestic Product ----
@@ -138,8 +148,13 @@ ar(gdp_df$value)
 ar(gdp_df$diff, na.action = na.pass) # For FD
 
 # Forecast
-forecast(object = ar(gdp_df$value), h = 3)
-forecast(object = ar(gdp_df$diff, na.action = na.pass), h = 3)
+frcst <- forecast(object = ar(gdp_df$value), h = 3)
+frcst
+plot(frcst)
+
+frcst <- forecast(object = ar(gdp_df$diff, na.action = na.pass), h = 3)
+frcst
+plot(frcst)
 
 
 ## Federal Funds Effective Rate ----
@@ -176,8 +191,13 @@ ar(fedfunds_df$value)
 ar(fedfunds_df$diff, na.action = na.pass) # For FD
 
 # Forecast
-forecast(object = ar(fedfunds_df$value), h = 3)
-forecast(object = ar(fedfunds_df$diff, na.action = na.pass), h = 3)
+frcst <- forecast(object = ar(fedfunds_df$value), h = 3)
+frcst
+plot(frcst)
+
+frcst <- forecast(object = ar(fedfunds_df$diff, na.action = na.pass), h = 3)
+frcst
+plot(frcst)
 
 
 ## Total electricity consumption USA: monthly data ----
@@ -212,8 +232,13 @@ ar(electricity_df$value)
 ar(electricity_df$diff, na.action = na.pass) # For FD
 
 # Forecast
-forecast(object = ar(electricity_df$value), h = 3)
-forecast(object = ar(electricity_df$diff, na.action = na.pass), h = 3)
+frcst <- forecast(object = ar(electricity_df$value), h = 3)
+frcst
+plot(frcst)
+
+frcst <- forecast(object = ar(electricity_df$diff, na.action = na.pass), h = 3)
+frcst
+plot(frcst)
 
 
 # Problem 2 ---------------------------------------------------------------
@@ -250,6 +275,9 @@ acf(stock_df$z, main = "", na.action = na.pass)
 pacf(stock_df$log_return, main = "", na.action = na.pass)
 pacf(stock_df$z, main = "", na.action = na.pass)
 
+# Fit AR model
+ar(stock_df$log_return, na.action = na.pass)
+ar(stock_df$z)
 
 # Problem 3 ---------------------------------------------------------------
 
