@@ -279,6 +279,7 @@ pacf(stock_df$z, main = "", na.action = na.pass)
 ar(stock_df$log_return, na.action = na.pass)
 ar(stock_df$z)
 
+
 # Problem 3 ---------------------------------------------------------------
 
 ## Question 1 ----
