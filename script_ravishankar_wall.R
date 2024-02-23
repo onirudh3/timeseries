@@ -279,6 +279,9 @@ pacf(stock_df$z, main = "", na.action = na.pass)
 ar(stock_df$log_return, na.action = na.pass)
 ar(stock_df$z)
 
+# Diagnostics
+checkresiduals(ar(stock_df$log_return, na.action = na.pass))
+
 
 # Problem 3 ---------------------------------------------------------------
 
