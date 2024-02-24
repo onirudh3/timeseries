@@ -285,43 +285,35 @@ checkresiduals(ar(stock_df$log_return, na.action = na.pass))
 
 # Problem 3 ---------------------------------------------------------------
 
-## Question 1 ----
+## 1. ----
 
-# beta = 0.21
-# T = 840
-# rho = 0.972
-# sigma_u = 30.05*10^4
-# sigma_v = 0.108*10^4
-# sigma_uv = -1.621*10^4
-
-# S = 1000
 model_beta <- 0
 
 set.seed(seed = 1232020)
 
 sim <- function(beta, T, rho, sigma_u, sigma_v, sigma_uv, S) {
   
-  Sigma <- matrix(c(sigma_u, sigma_uv, sigma_uv, sigma_v),2,2)
+  Sigma <- matrix(c(sigma_u, sigma_uv, sigma_uv, sigma_v), 2, 2)
   
-  uv <- data.frame(mvrnorm(n=S*T,
-                           mu=c(0,0),
-                           Sigma=Sigma))
+  uv <- data.frame(mvrnorm(n = S * T,
+                           mu = c(0, 0),
+                           Sigma = Sigma))
   
   for (s in 1:S){
     
     # Based on his email maybe we shouldn't use x0 = 0?
     # Confirmed changing x0 to 1 or 10 didn't substantively impact the estimated beta
-    x_t <- 0 + uv[(s-1)*T+1,2]
-    y_t <- 0 + uv[(s-1)*T+1,1]
+    x_t <- 0 + uv[(s - 1) * T + 1, 2]
+    y_t <- 0 + uv[(s - 1) * T + 1, 1]
     
     for(i in 2:T){
-      x_t[i] <- rho*x_t[i-1]+uv[(s-1)*T+i,2]
-      y_t[i] <- beta*x_t[i-1]+uv[(s-1)*T+i,1]
+      x_t[i] <- rho * x_t[i - 1] + uv[(s - 1) * T + i, 2]
+      y_t[i] <- beta * x_t[i - 1] + uv[(s - 1) * T + i, 1]
     }
     
-    data <- data.frame(y_t,x_t)
+    data <- data.frame(y_t, x_t)
     
-    model <- lm(y_t ~ lag(x_t), data=data)
+    model <- lm(y_t ~ lag(x_t), data = data)
     model_beta[s] <- model$coefficients[2]
     
     rm(x_t, y_t, data)
@@ -332,22 +324,33 @@ sim <- function(beta, T, rho, sigma_u, sigma_v, sigma_uv, S) {
   
 }
 
-betas_og <- sim(beta=0.21, T=840, rho=0.972, sigma_u = 30.05*10^4, 
-                sigma_v = 0.108*10^4, sigma_uv = -1.621*10^4, S=1000)
+betas_og <- sim(beta = 0.21, T = 840, rho = 0.972, sigma_u = 30.05 / 10 ^ 4, 
+                sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
+summary(betas_og)
+sd(betas_og)
 
-betas_rho5 <- sim(beta=0.21, T=840, rho=0.5, sigma_u = 30.05*10^4, 
-                  sigma_v = 0.108*10^4, sigma_uv = -1.621*10^4, S=1000)
+betas_rho5 <- sim(beta = 0.21, T = 840, rho = 0.5, sigma_u = 30.05 / 10 ^ 4, 
+                  sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
+summary(betas_rho5)
+sd(betas_rho5)
 
-betas_rho0 <- sim(beta=0.21, T=840, rho=0, sigma_u = 30.05*10^4, 
-                  sigma_v = 0.108*10^4, sigma_uv = -1.621*10^4, S=1000)
+betas_rho0 <- sim(beta = 0.21, T = 840, rho = 0, sigma_u = 30.05 / 10 ^ 4, 
+                  sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
+summary(betas_rho0)
+sd(betas_rho0)
 
-betas_sigma0 <- sim(beta=0.21, T=840, rho=0.972, sigma_u = 30.05*10^4, 
-                    sigma_v = 0.108*10^4, sigma_uv = 0, S=1000)
+betas_sigma0 <- sim(beta = 0.21, T = 840, rho = 0.972, sigma_u = 30.05 / 10 ^ 4, 
+                    sigma_v = 0.108 / 10 ^ 4, sigma_uv = 0, S = 1000)
+summary(betas_sigma0)
+sd(betas_sigma0)
 
-betas_T1680 <- sim(beta=0.21, T=1680, rho=0, sigma_u = 30.05*10^4, 
-                   sigma_v = 0.108*10^4, sigma_uv = -1.621*10^4, S=1000)
+betas_T1680 <- sim(beta = 0.21, T = 1680, rho = 0, sigma_u = 30.05 / 10 ^ 4, 
+                   sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
+summary(betas_T1680)
+sd(betas_T1680)
 
-## Question 3 ---
+
+## 3. ---
 
 df <- read_excel("ie_data.xls")
 
