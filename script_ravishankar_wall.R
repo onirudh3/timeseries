@@ -13,9 +13,10 @@ library(readxl)
 library(forecast)
 library(moments)
 library(MASS)
+library(tseries)
 
 # Forbid scientific notation
-options(scipen = 999)
+# options(scipen = 999)
 
 
 # Problem 1 ---------------------------------------------------------------
@@ -37,6 +38,10 @@ cpi_df <- fredr(
 
 # First difference
 cpi_df$diff <- c(NA, diff(cpi_df$value, 1))
+
+# ADF test
+adf.test(cpi_df$value) # Non-stationary
+adf.test(cpi_df$diff[!is.na(cpi_df$diff)]) # Stationary
 
 # Descriptive statistics
 summary(cpi_df$date)
@@ -81,6 +86,10 @@ inflation_df <- fredr(
 # First difference
 inflation_df$diff <- c(NA, diff(inflation_df$value, 1))
 
+# ADF test
+adf.test(inflation_df$value) # Non-stationary
+adf.test(inflation_df$diff[!is.na(inflation_df$diff)]) # Stationary
+
 # Descriptive statistics
 summary(inflation_df$date)
 summary(inflation_df$value)
@@ -123,6 +132,10 @@ gdp_df <- fredr(
 
 # First difference
 gdp_df$diff <- c(NA, diff(gdp_df$value, 1))
+
+# ADF test
+adf.test(gdp_df$value) # Non-stationary
+adf.test(gdp_df$diff[!is.na(gdp_df$diff)]) # Stationary
 
 # Descriptive statistics
 summary(gdp_df$date)
@@ -167,6 +180,10 @@ fedfunds_df <- fredr(
 # First difference
 fedfunds_df$diff <- c(NA, diff(fedfunds_df$value, 1))
 
+# ADF test
+adf.test(fedfunds_df$value) # Non-stationary
+adf.test(fedfunds_df$diff[!is.na(fedfunds_df$diff)]) # Stationary
+
 # Descriptive statistics
 summary(fedfunds_df$date)
 summary(fedfunds_df$value)
@@ -207,6 +224,10 @@ electricity_df <- read_excel("Retail_sales_of_electricity.xlsx") %>%
 
 # First difference
 electricity_df$diff <- c(NA, diff(electricity_df$value, 1))
+
+# ADF test
+adf.test(electricity_df$value) # Non-stationary
+adf.test(electricity_df$diff[!is.na(electricity_df$diff)]) # Stationary
 
 # Descriptive statistics
 summary(electricity_df$date)
