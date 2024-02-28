@@ -375,10 +375,130 @@ betas_T1680 <- sim(beta = 0.21, T = 1680, rho = 0, sigma_u = 30.05 / 10 ^ 4,
 summary(betas_T1680)
 sd(betas_T1680)
 
+# Q2 - Test
+# 
+model_beta <- 0
+
+set.seed(seed = 1232020)
+
+sim <- function(beta, T, rho, sigma_u, sigma_v, sigma_uv, S) {
+  
+  Sigma <- matrix(c(sigma_u, sigma_uv, sigma_uv, sigma_v), 2, 2)
+  
+  uv <- data.frame(mvrnorm(n = S * T,
+                           mu = c(0, 0),
+                           Sigma = Sigma))
+  
+  for (s in 1:S){
+    
+    # Based on his email maybe we shouldn't use x0 = 0?
+    # Confirmed changing x0 to 1 or 10 didn't substantively impact the estimated beta
+    x_t <- 0 + uv[(s - 1) * T + 1, 2]
+    y_t <- 0 + uv[(s - 1) * T + 1, 1]
+    
+    for(i in 2:T){
+      x_t[i] <- rho * x_t[i - 1] + uv[(s - 1) * T + i, 2]
+      y_t[i] <- beta*rho * x_t[i - 2] + beta*uv[(s - 1) * T + i-1, 2] + uv[(s - 1) * T + i, 1]
+    }
+    
+    data <- data.frame(y_t, x_t)
+    
+    model <- lm(y_t ~ lag(x_t), data = data)
+    model_beta[s] <- model$coefficients[2]
+    
+    rm(x_t, y_t, data)
+    
+  }
+  
+  return(model_beta)
+  
+}
+
+model_betarho <- 0
+model_betarho3 <- 0
+
+
+sim2 <- function(beta, T, rho, sigma_u, sigma_v, sigma_uv, S) {
+  
+  Sigma <- matrix(c(sigma_u, sigma_uv, sigma_uv, sigma_v), 2, 2)
+  
+  uv <- data.frame(mvrnorm(n = S * T,
+                           mu = c(0, 0),
+                           Sigma = Sigma))
+  
+  for (s in 1:S){
+    
+    # Based on his email maybe we shouldn't use x0 = 0?
+    # Confirmed changing x0 to 1 or 10 didn't substantively impact the estimated beta
+    x_t <- 0 + uv[(s - 1) * T + 1, 2]
+    y_t <- 0 + uv[(s - 1) * T + 1, 1]
+    
+    for(i in 2:T){
+      x_t[i] <- rho * x_t[i - 1] + uv[(s - 1) * T + i, 2]
+      y_t[i] <- beta * x_t[i - 1] + uv[(s - 1) * T + i, 1]
+    }
+    
+    data <- data.frame(y_t, x_t)
+    
+    model <- lm(y_t ~ lag(x_t, n=2), data = data)
+    model_betarho[s] <- model$coefficients[2]
+    
+    rm(x_t, y_t, data)
+    
+  }
+  
+  return(model_betarho)
+  
+}
+
+sim4 <- function(beta, T, rho, sigma_u, sigma_v, sigma_uv, S) {
+  
+  Sigma <- matrix(c(sigma_u, sigma_uv, sigma_uv, sigma_v), 2, 2)
+  
+  uv <- data.frame(mvrnorm(n = S * T,
+                           mu = c(0, 0),
+                           Sigma = Sigma))
+  
+  for (s in 1:S){
+    
+    # Based on his email maybe we shouldn't use x0 = 0?
+    # Confirmed changing x0 to 1 or 10 didn't substantively impact the estimated beta
+    x_t <- 0 + uv[(s - 1) * T + 1, 2]
+    y_t <- 0 + uv[(s - 1) * T + 1, 1]
+    
+    for(i in 2:T){
+      x_t[i] <- rho * x_t[i - 1] + uv[(s - 1) * T + i, 2]
+      y_t[i] <- beta * x_t[i - 1] + uv[(s - 1) * T + i, 1]
+    }
+    
+    data <- data.frame(y_t, x_t)
+    
+    model <- lm(y_t ~ lag(x_t, n=4), data = data)
+    model_betarho3[s] <- model$coefficients[2]
+    
+    rm(x_t, y_t, data)
+    
+  }
+  
+  return(model_betarho3)
+  
+}
+
+
+betarho_og <- sim2(beta = 0.21, T = 840, rho = 0.972, sigma_u = 30.05 / 10 ^ 4, 
+                sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
+summary(betarho_og)
+sd(betarho_og)
+
+betarho3_og <- sim4(beta = 0.21, T = 840, rho = 0.972, sigma_u = 30.05 / 10 ^ 4, 
+                    sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
+summary(betarho3_og)
+sd(betarho3_og)
+
 
 ## 3. ---
 
-df <- read_excel("ie_data.xls")
+df <- read_excel("C:/Users/alecr/OneDrive/Documents/TSE_2023-24/Time Series/ie_data (1).xls")
 
 # Remove NAs
 df <- df %>%
@@ -389,30 +509,44 @@ df$Date <- seq(as.Date("1871-01-01"), as.Date("2023-09-01"), by = "month")
 
 # Select useful columns
 df <- df %>%
-  dplyr::select(c("Date", "Real Price", "Real Dividend"))
+  dplyr::select(c("Date", "Real Price", "Real Dividend")) %>% 
+  rename(real_price = "Real Price",
+         real_div = "Real Dividend")
 
-# Log-ratio of dividends over price Dt/Pt
-df$log_d_p <- log(df$`Real Dividend`/df$`Real Price`)
+# Annualized dividends
 
-# Loop to create variables r_ti for the real return
-for (i in 1:48) {
-  
-  # Compute r_ti using the provided formula
-  r_ti <- log((dplyr::lead(df$`Real Price`, n = i) + dplyr::lead(df$`Real Dividend`, n = i)) / df$`Real Price`)
-  
-  # Assign values to dynamically generated variable names
-  df[[paste0("r_t", i)]] <- r_ti
+df$D_t <- df$real_div + rowSums(sapply(1:11, function(lag) lag(df$real_div, lag, default = NA)))
+
+
+# Log-ratio of annualized dividends over price Dt/Pt
+
+df$d_p <- log(df$D_t/df$real_price)
+
+df <- df %>% 
+  mutate(r_t_1 = log((lead(real_price,n=1)+lead(real_div,n=1))/real_price))
+
+compute_sums_with_leads <- function(data, max_leads) {
+  for (lead in 2:max_leads) {
+    data[[paste0("r_t_", lead)]] <- rowSums(sapply(1:lead, function(l) lead(data$r_t_1, l, default = NA)))
+  }
+  return(data)
 }
 
-# Sum of Rt+i 
-for (value in c(1, 3, 12, 24, 36, 48)) {
-  
-  # Compute row sums dynamically based on the current value
-  outcome <- rowSums(df[, paste0("r_t", 1:value)], na.rm = T)
-  
-  # Assign the outcome to the corresponding variable in df
-  df[[paste0("outcome", value)]] <- outcome
-}
+# Call the function with max_lags = 48
+data <- compute_sums_with_leads(df, max_leads = 48)
+
+data <- data %>% dplyr::select(Date, real_price, real_div, d_p, r_t_1, r_t_3, r_t_12, r_t_24,
+         r_t_36, r_t_48)
+
+# # Sum of Rt+i 
+# for (value in c(1, 3, 12, 24, 36, 48)) {
+#   
+#   # Compute row sums dynamically based on the current value
+#   outcome <- rowSums(df[, paste0("r_t", 1:value)], na.rm = T)
+#   
+#   # Assign the outcome to the corresponding variable in df
+#   df[[paste0("outcome", value)]] <- outcome
+# }
 
 # OLS
 model_summaries <- list()
@@ -421,10 +555,10 @@ model_list <- list()
 for (value in c(1, 3, 12, 24, 36, 48)) {
   
   # Formula with respect to values
-  formula <- as.formula(sprintf("outcome%d ~ log_d_p", value))
+  formula <- as.formula(sprintf("r_t_%d ~ d_p", value))
   
   # OLS model
-  model <- lm(formula, data = df)
+  model <- lm(formula, data = data)
   
   # Store variables
   model_list[[paste0("model", value)]] <- model
