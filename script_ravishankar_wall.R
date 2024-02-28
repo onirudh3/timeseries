@@ -14,6 +14,8 @@ library(forecast)
 library(moments)
 library(MASS)
 library(tseries)
+library(ggplot2)
+library(sandwich)
 
 # Forbid scientific notation
 # options(scipen = 999)
@@ -264,7 +266,8 @@ plot(frcst)
 
 # Problem 2 ---------------------------------------------------------------
 
-stock_df <- read.csv("apple_stock_prices_data.csv")
+stock_df <- read.csv("apple_stock_prices_data.csv") %>% 
+  mutate(Date = as.Date(Date))
 
 # Returns and z
 stock_df <- stock_df %>% 
@@ -274,8 +277,10 @@ stock_df <- stock_df %>%
 
 # Plot
 stock_df %>% 
-  ggplot() +
-  geom_line(aes(Date, log_return, group = 1))
+  ggplot(aes(Date, log_return)) +
+  geom_line()
+
+plot(stock_df$Date, stock_df$log_return, type = "l", xlab = "Date", ylab = "Log return")
 
 # Descriptive statistics
 summary(stock_df$log_return) # Mean
@@ -375,6 +380,57 @@ sd(betas_T1680)
 
 df <- read_excel("ie_data.xls")
 
+# Remove NAs
+df <- df %>%
+  filter(!is.na(Date))
 
+# Format date
+df$Date <- seq(as.Date("1871-01-01"), as.Date("2023-09-01"), by = "month")
+
+# Select useful columns
+df <- df %>%
+  dplyr::select(c("Date", "Real Price", "Real Dividend"))
+
+# Log-ratio of dividends over price Dt/Pt
+df$log_d_p <- log(df$`Real Dividend`/df$`Real Price`)
+
+# Loop to create variables r_ti for the real return
+for (i in 1:48) {
+  
+  # Compute r_ti using the provided formula
+  r_ti <- log((dplyr::lead(df$`Real Price`, n = i) + dplyr::lead(df$`Real Dividend`, n = i)) / df$`Real Price`)
+  
+  # Assign values to dynamically generated variable names
+  df[[paste0("r_t", i)]] <- r_ti
+}
+
+# Sum of Rt+i 
+for (value in c(1, 3, 12, 24, 36, 48)) {
+  
+  # Compute row sums dynamically based on the current value
+  outcome <- rowSums(df[, paste0("r_t", 1:value)], na.rm = T)
+  
+  # Assign the outcome to the corresponding variable in df
+  df[[paste0("outcome", value)]] <- outcome
+}
+
+# OLS
+model_summaries <- list()
+model_list <- list()
+
+for (value in c(1, 3, 12, 24, 36, 48)) {
+  
+  # Formula with respect to values
+  formula <- as.formula(sprintf("outcome%d ~ log_d_p", value))
+  
+  # OLS model
+  model <- lm(formula, data = df)
+  
+  # Store variables
+  model_list[[paste0("model", value)]] <- model
+  model_summaries[[paste0("model", value)]] <- summary(model)
+}
+
+hac_se <- vcovHAC(model)
 
 
