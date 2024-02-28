@@ -311,11 +311,19 @@ checkresiduals(ar(stock_df$log_return, na.action = na.pass))
 
 # Problem 3 ---------------------------------------------------------------
 
-## 1. ----
+## Simulation ----
 
 model_beta <- 0
+model_beta2 <- 0
+model_beta4 <- 0
+model_se <- 0
+model_se2 <- 0
+model_se4 <- 0
+model_nwse <- 0
+model_nwse2 <- 0
+model_nwse4 <- 0
 
-set.seed(seed = 1232020)
+set.seed(seed = 123203)
 
 sim <- function(beta, T, rho, sigma_u, sigma_v, sigma_uv, S) {
   
@@ -332,173 +340,66 @@ sim <- function(beta, T, rho, sigma_u, sigma_v, sigma_uv, S) {
     x_t <- 0 + uv[(s - 1) * T + 1, 2]
     y_t <- 0 + uv[(s - 1) * T + 1, 1]
     
-    for(i in 2:T){
+    for(i in 2:T) {
       x_t[i] <- rho * x_t[i - 1] + uv[(s - 1) * T + i, 2]
       y_t[i] <- beta * x_t[i - 1] + uv[(s - 1) * T + i, 1]
     }
     
     data <- data.frame(y_t, x_t)
     
-    model <- lm(y_t ~ lag(x_t), data = data)
+    lags <- ceiling(0.75 * T ^ (1 / 3))
+    
+    model <- lm(y_t ~ lag(x_t), data)
     model_beta[s] <- model$coefficients[2]
+    model_se[s] <- summary(model)$coefficients[2, 2]
+    model_nwse[s] <- lmtest::coeftest(model, vcov = NeweyWest)[2, 2]
+    
+    model <- lm(y_t ~ lag(x_t, n = 2), data)
+    model_beta2[s] <- model$coefficients[2]
+    model_se2[s] <- summary(model)$coefficients[2, 2]
+    model_nwse2[s] <- lmtest::coeftest(model, vcov = NeweyWest)[2, 2]
+    
+    model <- lm(y_t ~ lag(x_t, n = 4), data)
+    model_beta4[s] <- model$coefficients[2]
+    model_se4[s] <- summary(model)$coefficients[2, 2]
+    model_nwse4[s] <- lmtest::coeftest(model, vcov = NeweyWest)[2, 2]
     
     rm(x_t, y_t, data)
     
-  }
-  
-  return(model_beta)
-  
-}
-
-betas_og <- sim(beta = 0.21, T = 840, rho = 0.972, sigma_u = 30.05 / 10 ^ 4, 
-                sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
-summary(betas_og)
-sd(betas_og)
-
-betas_rho5 <- sim(beta = 0.21, T = 840, rho = 0.5, sigma_u = 30.05 / 10 ^ 4, 
-                  sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
-summary(betas_rho5)
-sd(betas_rho5)
-
-betas_rho0 <- sim(beta = 0.21, T = 840, rho = 0, sigma_u = 30.05 / 10 ^ 4, 
-                  sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
-summary(betas_rho0)
-sd(betas_rho0)
-
-betas_sigma0 <- sim(beta = 0.21, T = 840, rho = 0.972, sigma_u = 30.05 / 10 ^ 4, 
-                    sigma_v = 0.108 / 10 ^ 4, sigma_uv = 0, S = 1000)
-summary(betas_sigma0)
-sd(betas_sigma0)
-
-betas_T1680 <- sim(beta = 0.21, T = 1680, rho = 0, sigma_u = 30.05 / 10 ^ 4, 
-                   sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
-summary(betas_T1680)
-sd(betas_T1680)
-
-# Q2 - Test
-# 
-model_beta <- 0
-
-set.seed(seed = 1232020)
-
-sim <- function(beta, T, rho, sigma_u, sigma_v, sigma_uv, S) {
-  
-  Sigma <- matrix(c(sigma_u, sigma_uv, sigma_uv, sigma_v), 2, 2)
-  
-  uv <- data.frame(mvrnorm(n = S * T,
-                           mu = c(0, 0),
-                           Sigma = Sigma))
-  
-  for (s in 1:S){
-    
-    # Based on his email maybe we shouldn't use x0 = 0?
-    # Confirmed changing x0 to 1 or 10 didn't substantively impact the estimated beta
-    x_t <- 0 + uv[(s - 1) * T + 1, 2]
-    y_t <- 0 + uv[(s - 1) * T + 1, 1]
-    
-    for(i in 2:T){
-      x_t[i] <- rho * x_t[i - 1] + uv[(s - 1) * T + i, 2]
-      y_t[i] <- beta*rho * x_t[i - 2] + beta*uv[(s - 1) * T + i-1, 2] + uv[(s - 1) * T + i, 1]
-    }
-    
-    data <- data.frame(y_t, x_t)
-    
-    model <- lm(y_t ~ lag(x_t), data = data)
-    model_beta[s] <- model$coefficients[2]
-    
-    rm(x_t, y_t, data)
+    all_ests <- as.data.frame(cbind(model_beta, model_se, model_nwse, model_beta2, 
+                                    model_se2, model_nwse2, model_beta4, model_se4, 
+                                    model_nwse4))
     
   }
   
-  return(model_beta)
+  return(all_ests)
   
 }
 
-model_betarho <- 0
-model_betarho3 <- 0
+og <- sim(beta = 0.21, T = 840, rho = 0.972, sigma_u = 30.05 / 10 ^ 4, 
+          sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
+summary(og)
+
+rho5 <- sim(beta = 0.21, T = 840, rho = 0.5, sigma_u = 30.05 / 10 ^ 4, 
+            sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
+summary(rho5)
+
+rho0 <- sim(beta = 0.21, T = 840, rho = 0, sigma_u = 30.05 / 10 ^ 4, 
+            sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
+summary(rho0)
+
+sigma0 <- sim(beta = 0.21, T = 840, rho = 0.972, sigma_u = 30.05 / 10 ^ 4, 
+              sigma_v = 0.108 / 10 ^ 4, sigma_uv = 0, S = 1000)
+summary(sigma0)
+
+T1680 <- sim(beta = 0.21, T = 1680, rho = 0, sigma_u = 30.05 / 10 ^ 4, 
+             sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
+summary(T1680)
 
 
-sim2 <- function(beta, T, rho, sigma_u, sigma_v, sigma_uv, S) {
-  
-  Sigma <- matrix(c(sigma_u, sigma_uv, sigma_uv, sigma_v), 2, 2)
-  
-  uv <- data.frame(mvrnorm(n = S * T,
-                           mu = c(0, 0),
-                           Sigma = Sigma))
-  
-  for (s in 1:S){
-    
-    # Based on his email maybe we shouldn't use x0 = 0?
-    # Confirmed changing x0 to 1 or 10 didn't substantively impact the estimated beta
-    x_t <- 0 + uv[(s - 1) * T + 1, 2]
-    y_t <- 0 + uv[(s - 1) * T + 1, 1]
-    
-    for(i in 2:T){
-      x_t[i] <- rho * x_t[i - 1] + uv[(s - 1) * T + i, 2]
-      y_t[i] <- beta * x_t[i - 1] + uv[(s - 1) * T + i, 1]
-    }
-    
-    data <- data.frame(y_t, x_t)
-    
-    model <- lm(y_t ~ lag(x_t, n=2), data = data)
-    model_betarho[s] <- model$coefficients[2]
-    
-    rm(x_t, y_t, data)
-    
-  }
-  
-  return(model_betarho)
-  
-}
+## Irrational Exuberance ---
 
-sim4 <- function(beta, T, rho, sigma_u, sigma_v, sigma_uv, S) {
-  
-  Sigma <- matrix(c(sigma_u, sigma_uv, sigma_uv, sigma_v), 2, 2)
-  
-  uv <- data.frame(mvrnorm(n = S * T,
-                           mu = c(0, 0),
-                           Sigma = Sigma))
-  
-  for (s in 1:S){
-    
-    # Based on his email maybe we shouldn't use x0 = 0?
-    # Confirmed changing x0 to 1 or 10 didn't substantively impact the estimated beta
-    x_t <- 0 + uv[(s - 1) * T + 1, 2]
-    y_t <- 0 + uv[(s - 1) * T + 1, 1]
-    
-    for(i in 2:T){
-      x_t[i] <- rho * x_t[i - 1] + uv[(s - 1) * T + i, 2]
-      y_t[i] <- beta * x_t[i - 1] + uv[(s - 1) * T + i, 1]
-    }
-    
-    data <- data.frame(y_t, x_t)
-    
-    model <- lm(y_t ~ lag(x_t, n=4), data = data)
-    model_betarho3[s] <- model$coefficients[2]
-    
-    rm(x_t, y_t, data)
-    
-  }
-  
-  return(model_betarho3)
-  
-}
-
-
-betarho_og <- sim2(beta = 0.21, T = 840, rho = 0.972, sigma_u = 30.05 / 10 ^ 4, 
-                sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
-summary(betarho_og)
-sd(betarho_og)
-
-betarho3_og <- sim4(beta = 0.21, T = 840, rho = 0.972, sigma_u = 30.05 / 10 ^ 4, 
-                    sigma_v = 0.108 / 10 ^ 4, sigma_uv = -1.621 / 10 ^ 4, S = 1000)
-summary(betarho3_og)
-sd(betarho3_og)
-
-
-## 3. ---
-
-df <- read_excel("C:/Users/alecr/OneDrive/Documents/TSE_2023-24/Time Series/ie_data (1).xls")
+df <- read_excel("ie_data.xls")
 
 # Remove NAs
 df <- df %>%
@@ -514,14 +415,10 @@ df <- df %>%
          real_div = "Real Dividend")
 
 # Annualized dividends
-
 df$D_t <- df$real_div + rowSums(sapply(1:11, function(lag) lag(df$real_div, lag, default = NA)))
 
-
 # Log-ratio of annualized dividends over price Dt/Pt
-
 df$d_p <- log(df$D_t/df$real_price)
-
 df <- df %>% 
   mutate(r_t_1 = log((lead(real_price,n=1)+lead(real_div,n=1))/real_price))
 
@@ -535,8 +432,8 @@ compute_sums_with_leads <- function(data, max_leads) {
 # Call the function with max_lags = 48
 data <- compute_sums_with_leads(df, max_leads = 48)
 
-data <- data %>% dplyr::select(Date, real_price, real_div, d_p, r_t_1, r_t_3, r_t_12, r_t_24,
-         r_t_36, r_t_48)
+data <- data %>% dplyr::select(Date, real_price, real_div, d_p, r_t_1, r_t_3, 
+                               r_t_12, r_t_24, r_t_36, r_t_48)
 
 # # Sum of Rt+i 
 # for (value in c(1, 3, 12, 24, 36, 48)) {
